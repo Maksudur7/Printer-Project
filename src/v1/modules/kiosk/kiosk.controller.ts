@@ -9,6 +9,7 @@ export class KioskController {
 
   @Post('register')
   create(@Body() createKioskDto: CreateKioskDto) {
+    console.log('hit register');
     return this.kioskService.create(createKioskDto);
   }
 

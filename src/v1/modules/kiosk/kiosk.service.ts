@@ -6,15 +6,17 @@ import * as QRCode from 'qrcode';
 
 @Injectable()
 export class KioskService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   // ১. Notun Kiosk Register kora ebong QR Code banano
   async create(createKioskDto: CreateKioskDto) {
     const { name, deviceId, location } = createKioskDto;
-
+    console.log('hit service');
     // QR Code-er bhetore thakbe backend ba frontend-er URL
     const uploadUrl = `https://smartprint.com/upload?deviceId=${deviceId}`;
+    console.log('hit service 2');
     const qrCodeDataUrl = await QRCode.toDataURL(uploadUrl);
+    console.log('hit service 3');
     // const qrCodeDataUrl = await 
 
     return this.prisma.kiosk.create({
@@ -35,9 +37,9 @@ export class KioskService {
 
     return this.prisma.kiosk.update({
       where: { deviceId },
-      data: { 
+      data: {
         lastHeartbeat: new Date(),
-        status: 'ONLINE' 
+        status: 'ONLINE'
       },
     });
   }
