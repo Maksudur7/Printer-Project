@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ১. কিয়স্ক (Printing Machine) টেবিল
+model Kiosk {
+  id            String      @id @default(uuid())
+  deviceId      String      @unique // Hardware serial ba unique ID
+  name          String // Kiosk-er ekta naam (e.g. "Library-01")
+  location      String?
+  status        KioskStatus @default(ONLINE)
+  qrCodeUrl     String? // Backend theke generate kora QR link
+  paperLevel    Int         @default(100) // Percentage (0-100)
+  inkLevel      Int         @default(100) // Percentage (0-100)
+  lastHeartbeat DateTime    @default(now())
+
+  orders    Order[] // One-to-many relationship
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum KioskStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+  OUT_OF_PAPER
+}
+
+// ২. অর্ডার (Printing Request) টেবিল
+model Order {
+  id          String @id @default(uuid())
+  orderNumber Int    @unique @default(autoincrement())
+
+  // Kiosk-er sathe relation
+  kioskId String
+  kiosk   Kiosk  @relation(fields: [kioskId], references: [deviceId])
+
+  // File details
+  fileUrl   String // Cloud ba local storage link
+  fileName  String
+  pageCount Int
+  copyCount Int     @default(1)
+  isColor   Boolean @default(false)
+
+  // Money details
+  totalAmount Float // Mot koto taka bill holo
+  paidAmount  Float @default(0) // Koto taka ekhon porjonto dise
+
+  // Statuses
+  paymentStatus PaymentStatus @default(PENDING)
+  printStatus   PrintStatus   @default(WAITING_FOR_PAYMENT)
+
+  payments Payment[] // Payment details tracking
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL // Jodi keu kichu taka dey kintu purota na
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PrintStatus {
+  WAITING_FOR_PAYMENT
+  QUEUED // Taka deoa shesh, ekhon line-e ache
+  PRINTING // Machine ekhon print korche
+  COMPLETED // Hat-e peye gese
+  FAILED // Kono karone print hoy nai
+}
+
+// ৩. পেমেন্ট ট্রানজ্যাকশন টেবিল
+model Payment {
+  id      String @id @default(uuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  amount        Float // Ei specific transaction-e koto dise
+  method        PaymentMethod
+  transactionId String?       @unique // bKash/Nagad ID ba hardware signal ID
+
+  createdAt DateTime @default(now())
+}
+
+enum PaymentMethod {
+  CASH // Bill Acceptor theke deoa taka
+  BKASH
+  NAGAD
+  SSLCOMMERZ
+}
