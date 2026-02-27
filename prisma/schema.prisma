@@ -41,19 +41,25 @@ model Order {
   id          String @id @default(uuid())
   orderNumber Int    @unique @default(autoincrement())
 
-  // Kiosk-er sathe relation
+  // associating entities
   kioskId String
   kiosk   Kiosk  @relation(fields: [kioskId], references: [deviceId])
 
-  // File details
-  fileUrl   String // Cloud ba local storage link
-  fileName  String
-  pageCount Int
+  // user who placed the order (optional)
+  userId String?
+
+  // where the uploaded file is stored on backend/FS
+  filePath String?
+
+  // File details (possibly filled later)
+  fileUrl   String? // Cloud ba local storage link
+  fileName  String?
+  pageCount Int?
   copyCount Int     @default(1)
   isColor   Boolean @default(false)
 
   // Money details
-  totalAmount Float // Mot koto taka bill holo
+  totalAmount Float? // Mot koto taka bill holo
   paidAmount  Float @default(0) // Koto taka ekhon porjonto dise
 
   // Statuses

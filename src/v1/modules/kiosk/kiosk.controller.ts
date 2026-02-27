@@ -32,7 +32,7 @@ export class KioskController {
   // Machine status update (e.g. paper low)
   @Patch(':deviceId/status')
   updateStatus(
-    @Param('deviceId') deviceId: string, 
+    @Param('deviceId') deviceId: string,
     @Body() updateDto: UpdateKioskStatusDto
   ) {
     return this.kioskService.updateStatus(deviceId, updateDto);

@@ -1,9 +1,7 @@
-import "dotenv/config";
-import { PrismaPg } from '@prisma/adapter-pg'
+import 'dotenv/config';
 import { PrismaClient } from "@prisma/client";
 
-const connectionString = `${process.env.DATABASE_URL}`
-const adapter = new PrismaPg({ connectionString })
-const prisma = new PrismaClient({ adapter })
+// কোনো অ্যাডাপ্টার ছাড়া সরাসরি ক্লায়েন্ট ইনিশিয়ালাইজ করো
+const prisma = new PrismaClient();
 
-export { prisma }
+export { prisma };
