@@ -11,7 +11,8 @@ export class KioskService {
   async create(createKioskDto: CreateKioskDto) {
     const { name, deviceId, location } = createKioskDto;
 
-    const targetUrl = `https://smartprint.com/upload?deviceId=${deviceId}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const targetUrl = `${frontendUrl}/upload?deviceId=${deviceId}`;
 
     const qrCodeImage = await QRCode.toDataURL(targetUrl);
 

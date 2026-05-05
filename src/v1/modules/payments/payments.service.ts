@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 export class PaymentsService {
   private stripe: any;
   private readonly appUrl = process.env.APP_URL || 'http://localhost:5000';
-  private readonly frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  private readonly frontendUrl = process.env.FRONTEND_URL || 'https://printer-client.vercel.app';
 
   constructor(private readonly prisma: PrismaService) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
@@ -55,7 +55,7 @@ export class PaymentsService {
           orderId: order.id,
           amount: order.totalAmount || 0,
           method: 'STRIPE',
-          transactionId: session.id, 
+          transactionId: session.id,
         },
       });
 
@@ -86,10 +86,10 @@ export class PaymentsService {
             },
           });
         });
-        
+
         return { message: 'Payment successful', orderId };
       }
-      
+
       throw new BadRequestException('Payment not completed');
     } catch (error) {
       throw new BadRequestException(`Stripe Verification Error: ${error.message}`);

@@ -3,7 +3,7 @@ import { PaymentsService } from './payments.service';
 
 @Controller('v1/payments')
 export class PaymentsController {
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @Post('init/:orderId')
   async initPayment(@Param('orderId') orderId: string) {
@@ -21,8 +21,8 @@ export class PaymentsController {
     }
 
     const result = await this.paymentsService.paymentSuccess({ session_id, orderId });
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    
+    const frontendUrl = process.env.FRONTEND_URL || 'https://printer-client.vercel.app';
+
     return res.redirect(`${frontendUrl}/payment/success?orderId=${result.orderId}`);
   }
 
