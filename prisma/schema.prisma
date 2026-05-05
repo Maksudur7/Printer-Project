@@ -7,6 +7,7 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
+  binaryTargets   = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -14,7 +15,6 @@ datasource db {
 }
 
 
-// ১. কিয়স্ক (Printing Machine) টেবিল
 model Kiosk {
   id            String      @id @default(uuid())
   deviceId      String      @unique // Hardware serial ba unique ID
@@ -38,7 +38,6 @@ enum KioskStatus {
   OUT_OF_PAPER
 }
 
-// ২. অর্ডার (Printing Request) টেবিল
 model Order {
   id          String @id @default(uuid())
   orderNumber Int    @unique @default(autoincrement())
@@ -92,7 +91,6 @@ enum PrintStatus {
   FAILED // Kono karone print hoy nai
 }
 
-// ৩. পেমেন্ট ট্রানজ্যাকশন টেবিল
 model Payment {
   id      String @id @default(uuid())
   orderId String
