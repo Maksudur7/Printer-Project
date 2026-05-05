@@ -33,4 +33,12 @@ export class CreateOrderDto {
   @IsBoolean()
   @IsOptional()
   isColor?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  isDuplex?: boolean;
+
+  @IsString()
+  @IsOptional()
+  orientation?: string;
 }

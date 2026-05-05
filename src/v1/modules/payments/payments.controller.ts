@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Res, Query, NotFoundException } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
 
 @Controller('v1/payments')
@@ -10,30 +10,20 @@ export class PaymentsController {
     return this.paymentsService.initPayment(orderId);
   }
 
-  @Post('success')
-  async paymentSuccess(@Body() body: any, @Res() res: any) {
-    const result = await this.paymentsService.paymentSuccess(body);
+  @Get('success')
+  async paymentSuccess(
+    @Query('session_id') session_id: string,
+    @Query('orderId') orderId: string,
+    @Res() res: any
+  ) {
+    if (!session_id || !orderId) {
+      throw new NotFoundException('Missing payment details');
+    }
+
+    const result = await this.paymentsService.paymentSuccess({ session_id, orderId });
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    
     return res.redirect(`${frontendUrl}/payment/success?orderId=${result.orderId}`);
-  }
-
-  @Post('fail')
-  async paymentFail(@Body() body: any, @Res() res: any) {
-    const result = await this.paymentsService.paymentFail(body);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return res.redirect(`${frontendUrl}/payment/fail?orderId=${result.orderId}`);
-  }
-
-  @Post('cancel')
-  async paymentCancel(@Body() body: any, @Res() res: any) {
-    const result = await this.paymentsService.paymentCancel(body);
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-    return res.redirect(`${frontendUrl}/payment/fail?orderId=${result.orderId}`);
-  }
-
-  @Post('ipn')
-  async paymentIpn(@Body() body: any) {
-    return this.paymentsService.paymentIpn(body);
   }
 
   @Get()

@@ -60,6 +60,8 @@ model Order {
   pageCount Int?
   copyCount Int     @default(1)
   isColor   Boolean @default(false)
+  isDuplex  Boolean @default(false)
+  orientation String  @default("portrait") // portrait ba landscape
 
   // Money details
   totalAmount Float? // Mot koto taka bill holo
@@ -108,4 +110,5 @@ enum PaymentMethod {
   BKASH
   NAGAD
   SSLCOMMERZ
+  STRIPE
 }

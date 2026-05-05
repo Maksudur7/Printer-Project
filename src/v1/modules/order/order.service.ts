@@ -1,17 +1,34 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/v1/shared/prisma/prisma.service';
-// তোমার DTO গুলো ব্যবহার করা ভালো, আমি জাস্ট লজিকটা ক্লিন করে দিচ্ছি
 import { UpdateOrderDto } from './dto/update-order.dto';
+const pdf = require('pdf-parse');
+import * as fs from 'fs';
 
 @Injectable()
 export class OrderService {
   constructor(private readonly prisma: PrismaService) { }
 
   async createOrder(data: any, file: Express.Multer.File) {
-    const pricePerPage = Number(process.env.PRICE_PER_PAGE) || 5;
-    const pageCount = parseInt(data.pageCount) || 1;
+    // ১. পেজ সংখ্যা ডিটেক্ট করা (PDF হলে)
+    let pageCount = parseInt(data.pageCount) || 1;
+    
+    if (file.mimetype === 'application/pdf') {
+      try {
+        const dataBuffer = fs.readFileSync(file.path);
+        const pdfData = await pdf(dataBuffer);
+        pageCount = pdfData.numpages;
+      } catch (error) {
+        console.error('Error parsing PDF:', error);
+      }
+    }
+
+    // ২. প্রাইস ক্যালকুলেশন
+    const isColor = String(data.isColor).toLowerCase() === 'true';
     const copyCount = parseInt(data.copyCount) || 1;
-    const totalAmount = pageCount * pricePerPage * copyCount;
+    
+    // কালার ৫ টাকা, সাদাকালো ২ টাকা (ডিফল্ট)
+    const rate = isColor ? (Number(process.env.PRICE_COLOR) || 5) : (Number(process.env.PRICE_BW) || 2);
+    const totalAmount = pageCount * rate * copyCount;
 
     const appUrl = process.env.APP_URL || 'http://localhost:5000';
     const fileUrl = `${appUrl}/${file.filename}`;
@@ -27,7 +44,9 @@ export class OrderService {
         fileUrl: fileUrl,
         pageCount: pageCount,
         copyCount: copyCount,
-        isColor: String(data.isColor).toLowerCase() === 'true',
+        isColor: isColor,
+        isDuplex: String(data.isDuplex).toLowerCase() === 'true',
+        orientation: data.orientation || 'portrait',
         totalAmount: totalAmount,
         paymentStatus: 'PENDING',
         printStatus: 'WAITING_FOR_PAYMENT',
