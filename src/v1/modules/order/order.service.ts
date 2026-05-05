@@ -8,20 +8,26 @@ export class OrderService {
   constructor(private readonly prisma: PrismaService) { }
 
   async createOrder(data: any, file: Express.Multer.File) {
-    const pricePerPage = 5;
+    const pricePerPage = Number(process.env.PRICE_PER_PAGE) || 5;
     const pageCount = parseInt(data.pageCount) || 1;
     const copyCount = parseInt(data.copyCount) || 1;
     const totalAmount = pageCount * pricePerPage * copyCount;
 
+    const appUrl = process.env.APP_URL || 'http://localhost:5000';
+    const fileUrl = `${appUrl}/${file.filename}`;
+
     return await this.prisma.order.create({
       data: {
         userId: data.userId,
+        userEmail: data.userEmail,
+        userPhone: data.userPhone,
         kioskId: data.kioskId,
         filePath: file.path,
         fileName: file.originalname,
+        fileUrl: fileUrl,
         pageCount: pageCount,
         copyCount: copyCount,
-        isColor: String(data.isColor).toLowerCase() === 'false',
+        isColor: String(data.isColor).toLowerCase() === 'true',
         totalAmount: totalAmount,
         paymentStatus: 'PENDING',
         printStatus: 'WAITING_FOR_PAYMENT',

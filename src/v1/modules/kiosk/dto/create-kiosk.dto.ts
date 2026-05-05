@@ -1,5 +1,15 @@
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+
 export class CreateKioskDto {
+    @IsString()
+    @IsNotEmpty()
     name: string;
+
+    @IsString()
+    @IsNotEmpty()
     deviceId: string;
-    location: string;
+
+    @IsString()
+    @IsOptional()
+    location?: string;
 }

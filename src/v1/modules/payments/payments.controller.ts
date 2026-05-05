@@ -1,15 +1,39 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Res, HttpStatus } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
 
-@Controller('payments')
+@Controller('v1/payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
-  @Post()
-  create(@Body() createPaymentDto: CreatePaymentDto) {
-    return this.paymentsService.create(createPaymentDto);
+  @Post('init/:orderId')
+  async initPayment(@Param('orderId') orderId: string) {
+    return this.paymentsService.initPayment(orderId);
+  }
+
+  @Post('success')
+  async paymentSuccess(@Body() body: any, @Res() res: any) {
+    const result = await this.paymentsService.paymentSuccess(body);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return res.redirect(`${frontendUrl}/payment/success?orderId=${result.orderId}`);
+  }
+
+  @Post('fail')
+  async paymentFail(@Body() body: any, @Res() res: any) {
+    const result = await this.paymentsService.paymentFail(body);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return res.redirect(`${frontendUrl}/payment/fail?orderId=${result.orderId}`);
+  }
+
+  @Post('cancel')
+  async paymentCancel(@Body() body: any, @Res() res: any) {
+    const result = await this.paymentsService.paymentCancel(body);
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return res.redirect(`${frontendUrl}/payment/fail?orderId=${result.orderId}`);
+  }
+
+  @Post('ipn')
+  async paymentIpn(@Body() body: any) {
+    return this.paymentsService.paymentIpn(body);
   }
 
   @Get()
@@ -19,16 +43,6 @@ export class PaymentsController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.paymentsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentDto: UpdatePaymentDto) {
-    return this.paymentsService.update(+id, updatePaymentDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.paymentsService.remove(+id);
+    return this.paymentsService.findOne(id);
   }
 }

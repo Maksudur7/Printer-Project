@@ -8,6 +8,17 @@ async function bootstrap() {
   console.log('i am into main');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // Enable CORS for frontend communication
+  app.enableCors();
+
+  // Global validation pipe
+  const { ValidationPipe } = await import('@nestjs/common');
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }));
+
   app.useStaticAssets(join(__dirname, '..', 'uploads'));
 
   const port = process.env.PORT || 5000; // নিশ্চিত করছি আমরা ৫০০১ বা ৫০০০ এ চালাচ্ছি

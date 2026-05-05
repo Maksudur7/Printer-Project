@@ -5,12 +5,14 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
   provider = "postgresql"
 }
+
 
 // ১. কিয়স্ক (Printing Machine) টেবিল
 model Kiosk {
@@ -46,7 +48,9 @@ model Order {
   kiosk   Kiosk  @relation(fields: [kioskId], references: [deviceId])
 
   // user who placed the order (optional)
-  userId String?
+  userId    String?
+  userEmail String?
+  userPhone String?
 
   // where the uploaded file is stored on backend/FS
   filePath String?
