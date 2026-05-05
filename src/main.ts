@@ -3,61 +3,65 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
+import { Express } from 'express';
 
-let cachedApp: NestExpressApplication;
+let cachedServer: any;
 
-async function bootstrap(): Promise<NestExpressApplication> {
-  // Cache the app instance for serverless reuse (Vercel)
-  if (cachedApp) {
-    return cachedApp;
+async function bootstrap(): Promise<any> {
+  if (cachedServer) {
+    return cachedServer;
   }
 
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: ['error', 'warn', 'log'],
-  });
+  try {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+      logger: ['error', 'warn', 'log', 'debug'],
+    });
 
-  // Enable CORS for frontend communication
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || '*',
-    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  });
+    app.enableCors({
+      origin: true, // Allow all for debugging
+      methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      credentials: true,
+    });
 
-  // Global validation pipe
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    forbidNonWhitelisted: true,
-    transform: true,
-  }));
+    app.useGlobalPipes(new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }));
 
-  // Static assets শুধু local env এ (Vercel এ /uploads নেই)
-  if (process.env.NODE_ENV !== 'production') {
-    const { join } = await import('path');
-    app.useStaticAssets(join(__dirname, '..', 'uploads'));
+    await app.init();
+    
+    cachedServer = app.getHttpAdapter().getInstance();
+    return cachedServer;
+  } catch (error) {
+    console.error('CRITICAL BOOTSTRAP ERROR:', error);
+    throw error;
   }
-
-  await app.init();
-
-  cachedApp = app;
-  return app;
 }
 
-// Local development: server হিসেবে চালাও
-if (process.env.NODE_ENV !== 'production') {
-  bootstrap().then(async (app) => {
+// For Vercel Serverless
+export default async (req: any, res: any) => {
+  try {
+    const server = await bootstrap();
+    return server(req, res);
+  } catch (err: any) {
+    console.error('Serverless Function Crash:', err);
+    res.status(500).json({
+      error: 'Internal Server Error',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+  }
+};
+
+// For Local Development
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  async function startLocal() {
+    const app = await NestFactory.create<NestExpressApplication>(AppModule);
+    app.enableCors();
     const port = process.env.PORT || 5000;
     await app.listen(port);
-    console.log(`-----------------------------------------------`);
-    console.log(`🚀 Server is running at: http://localhost:${port}`);
-    console.log(`-----------------------------------------------`);
-  });
+    console.log(`🚀 Local server running at http://localhost:${port}`);
+  }
+  startLocal();
 }
-
-// Vercel Serverless Function export
-module.exports = async (req: any, res: any) => {
-  const app = await bootstrap();
-  const httpAdapter = app.getHttpAdapter();
-  const instance = httpAdapter.getInstance();
-  instance(req, res);
-};

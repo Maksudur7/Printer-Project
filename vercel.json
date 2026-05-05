@@ -2,11 +2,8 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/main.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["src/**/*", "prisma/**/*"]
-      }
+      "src": "package.json",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
