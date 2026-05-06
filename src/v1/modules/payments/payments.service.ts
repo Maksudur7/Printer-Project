@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/v1/shared/prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import Stripe from 'stripe';
 
 @Injectable()

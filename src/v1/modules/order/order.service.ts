@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/v1/shared/prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import { UpdateOrderDto } from './dto/update-order.dto';
 const pdf = require('pdf-parse');
 import * as fs from 'fs';

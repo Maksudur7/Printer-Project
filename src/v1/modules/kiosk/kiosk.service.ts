@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateKioskDto } from './dto/create-kiosk.dto';
-import { PrismaService } from 'src/v1/shared/prisma/prisma.service';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 import { UpdateKioskStatusDto } from './dto/update-kiosk.dto';
 import * as QRCode from 'qrcode';
 import { KioskStatus } from '@prisma/client';
