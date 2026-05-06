@@ -22,8 +22,8 @@ async function bootstrap() {
     
     app.enableCors();
     app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
+      whitelist: true,         // strips unknown fields silently
+      forbidNonWhitelisted: false, // do NOT throw 400 for extra fields
       transform: true,
     }));
 

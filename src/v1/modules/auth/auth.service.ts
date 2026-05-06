@@ -2,10 +2,21 @@ import { Injectable, UnauthorizedException, BadRequestException, NotFoundExcepti
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
 import * as bcrypt from 'bcrypt';
+import * as jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'smart-print-kiosk-secret-key-2024';
 
 @Injectable()
 export class AuthService {
   constructor(private prisma: PrismaService) {}
+
+  private generateToken(user: { id: string; email: string; role: string }) {
+    return jwt.sign(
+      { sub: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+  }
 
   // ১. রেজিস্ট্রেশন (Admin হিসেবে)
   async register(dto: RegisterDto) {
@@ -14,84 +25,101 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new BadRequestException('Email already exists');
+      throw new BadRequestException('This email is already registered.');
     }
 
-    // Password hashing
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // Create user as ADMIN but with isApproved = false
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hashedPassword,
         name: dto.name,
         role: 'ADMIN',
-        isApproved: false, // Default pending
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        isApproved: true,
+        isApproved: false, // Must wait for Super Admin approval
       },
     });
-  }
 
-  // ২. লগইন
-  async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
-    }
-
-    if (!user.isApproved) {
-      throw new UnauthorizedException('Your account is pending admin approval');
-    }
-
-    // Here you would normally return a JWT token
-    // For now, we return user info
     return {
-      message: 'Login successful',
+      message: 'Registration successful. Please wait for Super Admin approval.',
       user: {
         id: user.id,
         email: user.email,
+        name: user.name,
         role: user.role,
         isApproved: user.isApproved,
       },
     };
   }
 
-  // ৩. অ্যাডমিন অ্যাপ্রুভ করা (Super Admin এর জন্য)
-  async approveAdmin(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  // ২. লগইন (Token সহ রিটার্ন করবে)
+  async login(dto: LoginDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new UnauthorizedException('Invalid email or password.');
     }
 
-    return this.prisma.user.update({
-      where: { id: userId },
-      data: { isApproved: true },
-      select: { id: true, email: true, isApproved: true },
-    });
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid email or password.');
+    }
+
+    // NOTE: We allow login even if not approved,
+    // so the frontend can redirect to the /pending page.
+    const token = this.generateToken(user);
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        isApproved: user.isApproved,
+      },
+    };
   }
 
-  // ৪. সব পেন্ডিং অ্যাডমিনদের লিস্ট
+  // ৩. পেন্ডিং অ্যাডমিনদের লিস্ট (Super Admin এর জন্য)
   async getPendingAdmins() {
     return this.prisma.user.findMany({
       where: { role: 'ADMIN', isApproved: false },
       select: { id: true, email: true, name: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // ৪. অ্যাডমিন অ্যাপ্রুভ করা
+  async approveAdmin(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { isApproved: true },
+    });
+
+    return {
+      message: `${updatedUser.email} has been approved successfully.`,
+      user: { id: updatedUser.id, email: updatedUser.email, isApproved: true },
+    };
+  }
+
+  // ৫. কারেন্ট ইউজারের প্রোফাইল
+  async getProfile(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, name: true, role: true, isApproved: true, createdAt: true },
+    });
+
+    if (!user) throw new NotFoundException('User not found.');
+    return user;
   }
 }
