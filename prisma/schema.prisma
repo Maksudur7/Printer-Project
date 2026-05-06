@@ -134,3 +134,10 @@ model User {
   updatedAt  DateTime @updatedAt
 }
 
+model Config {
+  id              String   @id @default(uuid())
+  bwPrice         Float    @default(2.0)
+  colorPrice      Float    @default(5.0)
+  paperThreshold  Int      @default(5)
+  updatedAt       DateTime @updatedAt
+}

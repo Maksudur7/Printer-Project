@@ -155,7 +155,22 @@ export class AuthService {
     return { message: 'User deleted successfully.' };
   }
 
-  // ৭. কারেন্ট ইউজারের প্রোফাইল
+  // ৭. সব ইউজারের লিস্ট
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isApproved: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+  }
+
+  // ৮. কারেন্ট ইউজারের প্রোফাইল
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

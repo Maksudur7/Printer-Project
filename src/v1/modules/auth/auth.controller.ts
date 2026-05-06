@@ -18,10 +18,16 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  // GET /v1/auth/all-admins → Returns both pending and approved
+  // GET /v1/auth/all-admins → Returns both pending and approved (deprecated, use all-users)
   @Get('all-admins')
   getAll() {
-    return this.authService.getAllAdmins();
+    return this.authService.getAllUsers();
+  }
+
+  // GET /v1/auth/all-users → Returns all users
+  @Get('all-users')
+  getAllUsers() {
+    return this.authService.getAllUsers();
   }
 
   // DELETE /v1/auth/user/:id → Remove a user
