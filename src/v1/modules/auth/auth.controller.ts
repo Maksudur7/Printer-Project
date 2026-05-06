@@ -18,19 +18,21 @@ export class AuthController {
     return this.authService.login(dto);
   }
 
-  // GET /v1/auth/pending-admins → Used by frontend admin/users page
-  @Get('pending-admins')
-  getPending() {
-    return this.authService.getPendingAdmins();
+  // GET /v1/auth/all-admins → Returns both pending and approved
+  @Get('all-admins')
+  getAll() {
+    return this.authService.getAllAdmins();
   }
 
-  // POST /v1/auth/approve-admin/:id → Used by frontend to approve/reject
-  @Post('approve-admin/:id')
-  approve(@Param('id') id: string, @Body('approve') approve: boolean) {
-    if (approve) {
-      return this.authService.approveAdmin(id);
-    }
-    // Reject: simply return a message (or delete user)
-    return { message: 'Request rejected.' };
+  // DELETE /v1/auth/user/:id → Remove a user
+  @Post('delete-user/:id') // Using POST for compatibility if DELETE is restricted
+  deleteUser(@Param('id') id: string) {
+    return this.authService.deleteUser(id);
+  }
+
+  // PATCH /v1/auth/user/:id → Update a user
+  @Patch('user/:id')
+  updateUser(@Param('id') id: string, @Body() body: any) {
+    return this.authService.updateUser(id, body);
   }
 }

@@ -93,7 +93,7 @@ export class AuthService {
     });
   }
 
-  // ৪. অ্যাডমিন অ্যাপ্রুভ করা
+  // ৪. অ্যাডমিন অ্যাপ্রুভ/রিজেক্ট করা
   async approveAdmin(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
@@ -112,7 +112,50 @@ export class AuthService {
     };
   }
 
-  // ৫. কারেন্ট ইউজারের প্রোফাইল
+  // ৪.২ অ্যাডমিন লিস্ট (সব)
+  async getAllAdmins() {
+    return this.prisma.user.findMany({
+      where: { role: 'ADMIN' },
+      select: { id: true, email: true, name: true, isApproved: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // ৪.৩ ইউজার ডিলিট করা
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { message: 'User deleted successfully.' };
+  }
+
+  // ৫. ইউজার আপডেট করা (Admin/User profile update)
+  async updateUser(userId: string, data: { name?: string; email?: string; role?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+
+    return {
+      message: 'User updated successfully.',
+      user: updatedUser
+    };
+  }
+
+  // ৬. ইউজার ডিলিট করা
+  async deleteUser(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found.');
+
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { message: 'User deleted successfully.' };
+  }
+
+  // ৭. কারেন্ট ইউজারের প্রোফাইল
   async getProfile(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },

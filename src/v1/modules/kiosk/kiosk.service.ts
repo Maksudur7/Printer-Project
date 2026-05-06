@@ -104,4 +104,24 @@ export class KioskService {
     if (!kiosk) throw new NotFoundException('Kiosk not found');
     return kiosk;
   }
+
+  // ৪. কিওস্ক ডিলিট করা
+  async remove(deviceId: string) {
+    const kiosk = await this.prisma.kiosk.findUnique({ where: { deviceId } });
+    if (!kiosk) throw new NotFoundException('Kiosk not found');
+
+    await this.prisma.kiosk.delete({ where: { deviceId } });
+    return { message: 'Kiosk deleted successfully' };
+  }
+
+  // ৫. কিওস্ক ইনফো আপডেট করা
+  async updateInfo(deviceId: string, data: { name?: string; location?: string }) {
+    const kiosk = await this.prisma.kiosk.findUnique({ where: { deviceId } });
+    if (!kiosk) throw new NotFoundException('Kiosk not found');
+
+    return this.prisma.kiosk.update({
+      where: { deviceId },
+      data,
+    });
+  }
 };

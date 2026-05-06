@@ -23,6 +23,16 @@ export class KioskController {
   adminToggle(@Param('deviceId') deviceId: string, @Body('status') status: KioskStatus) {
     return this.kioskService.adminToggleStatus(deviceId, status);
   }
+
+  @Post('admin/delete/:deviceId')
+  remove(@Param('deviceId') deviceId: string) {
+    return this.kioskService.remove(deviceId);
+  }
+
+  @Patch('admin/update/:deviceId')
+  update(@Param('deviceId') deviceId: string, @Body() body: any) {
+    return this.kioskService.updateInfo(deviceId, body);
+  }
   // -----------------------
 
   @Get('all')
