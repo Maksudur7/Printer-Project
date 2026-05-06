@@ -1,6 +1,8 @@
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { UserRole } from '@prisma/client';
+
 import * as bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
 
@@ -124,14 +126,14 @@ export class AuthService {
   // ৪.৩ ইউজার ডিলিট করা
   async deleteUser(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException('User not found.');
     
     await this.prisma.user.delete({ where: { id: userId } });
     return { message: 'User deleted successfully.' };
   }
 
   // ৫. ইউজার আপডেট করা (Admin/User profile update)
-  async updateUser(userId: string, data: { name?: string; email?: string; role?: string }) {
+  async updateUser(userId: string, data: { name?: string; email?: string; role?: UserRole }) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found.');
 
@@ -144,15 +146,6 @@ export class AuthService {
       message: 'User updated successfully.',
       user: updatedUser
     };
-  }
-
-  // ৬. ইউজার ডিলিট করা
-  async deleteUser(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found.');
-
-    await this.prisma.user.delete({ where: { id: userId } });
-    return { message: 'User deleted successfully.' };
   }
 
   // ৭. সব ইউজারের লিস্ট

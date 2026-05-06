@@ -6,14 +6,19 @@ export class ConfigService {
   constructor(private prisma: PrismaService) {}
 
   async get() {
-    let config = await this.prisma.config.findFirst();
-    if (!config) {
-      // Create default if not exists
-      config = await this.prisma.config.create({
-        data: { bwPrice: 2, colorPrice: 5, paperThreshold: 5 }
-      });
+    try {
+      let config = await this.prisma.config.findFirst();
+      if (!config) {
+        // Create default if not exists
+        config = await this.prisma.config.create({
+          data: { bwPrice: 2, colorPrice: 5, paperThreshold: 5 }
+        });
+      }
+      return config;
+    } catch (error: any) {
+      console.error('Prisma Config Error:', error);
+      throw new Error(`Prisma Error: ${error.message}`);
     }
-    return config;
   }
 
   async update(data: any) {
