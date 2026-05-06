@@ -11,7 +11,7 @@ export class OrderService {
   async createOrder(data: any, file: Express.Multer.File) {
     // ১. পেজ সংখ্যা ডিটেক্ট করা (PDF হলে)
     let pageCount = parseInt(data.pageCount) || 1;
-    
+
     if (file.mimetype === 'application/pdf') {
       try {
         const dataBuffer = fs.readFileSync(file.path);
@@ -25,12 +25,12 @@ export class OrderService {
     // ২. প্রাইস ক্যালকুলেশন
     const isColor = String(data.isColor).toLowerCase() === 'true';
     const copyCount = parseInt(data.copyCount) || 1;
-    
+
     // কালার ৫ টাকা, সাদাকালো ২ টাকা (ডিফল্ট)
     const rate = isColor ? (Number(process.env.PRICE_COLOR) || 5) : (Number(process.env.PRICE_BW) || 2);
     const totalAmount = pageCount * rate * copyCount;
 
-    const appUrl = process.env.APP_URL || 'http://localhost:5000';
+    const appUrl = process.env.APP_URL || 'https://printer-project-two.vercel.app';
     const fileUrl = `${appUrl}/${file.filename}`;
 
     return await this.prisma.order.create({

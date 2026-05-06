@@ -5,7 +5,7 @@ import Stripe from 'stripe';
 @Injectable()
 export class PaymentsService {
   private stripe: any;
-  private readonly appUrl = process.env.APP_URL || 'http://localhost:5000';
+  private readonly appUrl = process.env.APP_URL || 'https://printer-project-two.vercel.app';
   private readonly frontendUrl = process.env.FRONTEND_URL || 'https://printer-client.vercel.app';
 
   constructor(private readonly prisma: PrismaService) {
