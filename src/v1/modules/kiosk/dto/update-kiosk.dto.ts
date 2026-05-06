@@ -1,20 +1,19 @@
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
-import { KioskStatus } from '@prisma/client';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class UpdateKioskStatusDto {
-    @IsEnum(KioskStatus)
-    @IsOptional()
-    status?: KioskStatus;
+  @IsOptional()
+  @IsString()
+  status?: string;
 
-    @IsInt()
-    @Min(0)
-    @Max(100)
-    @IsOptional()
-    paperLevel?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  paperLevel?: number;
 
-    @IsInt()
-    @Min(0)
-    @Max(100)
-    @IsOptional()
-    inkLevel?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  inkLevel?: number;
 }

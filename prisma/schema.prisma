@@ -24,6 +24,8 @@ model Kiosk {
   qrCodeUrl     String? // Backend theke generate kora QR link
   paperLevel    Int         @default(100) // Percentage (0-100)
   inkLevel      Int         @default(100) // Percentage (0-100)
+  lastError     String?     // Recording specific error messages
+  totalRevenue  Float       @default(0)   // Total earnings of this device
   lastHeartbeat DateTime    @default(now())
 
   orders    Order[] // One-to-many relationship
@@ -36,6 +38,8 @@ enum KioskStatus {
   OFFLINE
   MAINTENANCE
   OUT_OF_PAPER
+  OUT_OF_INK
+  SYSTEM_ERROR
 }
 
 model Order {
@@ -112,3 +116,21 @@ enum PaymentMethod {
   SSLCOMMERZ
   STRIPE
 }
+
+enum UserRole {
+  ADMIN
+  SUPER_ADMIN
+  USER
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  name       String?
+  role       UserRole @default(USER)
+  isApproved Boolean  @default(false) // Admin approval logic
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+

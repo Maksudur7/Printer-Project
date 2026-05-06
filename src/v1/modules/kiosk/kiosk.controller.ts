@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param } from '@nestjs/common';
 import { KioskService } from './kiosk.service';
 import { CreateKioskDto } from './dto/create-kiosk.dto';
 import { UpdateKioskStatusDto } from './dto/update-kiosk.dto';
+import { KioskStatus } from '@prisma/client';
 
 @Controller('v1/kiosk')
 export class KioskController {
@@ -9,9 +10,20 @@ export class KioskController {
 
   @Post('register')
   create(@Body() createKioskDto: CreateKioskDto) {
-    console.log('hit register');
     return this.kioskService.create(createKioskDto);
   }
+
+  // --- ADMIN ENDPOINTS ---
+  @Get('admin/stats')
+  getAdminStats() {
+    return this.kioskService.getDashboardStats();
+  }
+
+  @Patch('admin/toggle/:deviceId')
+  adminToggle(@Param('deviceId') deviceId: string, @Body('status') status: KioskStatus) {
+    return this.kioskService.adminToggleStatus(deviceId, status);
+  }
+  // -----------------------
 
   @Get('all')
   findAll() {
@@ -23,13 +35,11 @@ export class KioskController {
     return this.kioskService.findOne(deviceId);
   }
 
-  // Hardware ping pathabe ekhane
   @Patch(':deviceId/heartbeat')
   heartbeat(@Param('deviceId') deviceId: string) {
     return this.kioskService.updateHeartbeat(deviceId);
   }
 
-  // Machine status update (e.g. paper low)
   @Patch(':deviceId/status')
   updateStatus(
     @Param('deviceId') deviceId: string,
