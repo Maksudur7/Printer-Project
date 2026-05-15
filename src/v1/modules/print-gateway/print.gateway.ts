@@ -53,9 +53,12 @@ export class PrintGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     try {
       // QR Code URL Generate koro (Frontend link)
+      // Vercel-e deploy korle oboshoy FRONTEND_URL environment variable set korte hobe
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-      const scanUrl = `${frontendUrl}/upload?kiosk=${deviceId}`;
+      const scanUrl = `${frontendUrl.replace(/\/$/, '')}/upload?kiosk=${deviceId}`;
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(scanUrl)}`;
+
+      this.logger.log(`Generated QR for Kiosk ${deviceId}: ${scanUrl}`);
 
       // ১. Kiosk Upsert (Thakle update, na thakle create)
       const kiosk = await this.prisma.kiosk.upsert({

@@ -2,11 +2,27 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { OrderService } from './order.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
-import { Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseInterceptors, Body } from '@nestjs/common';
-import { UpdateOrderDto } from './dto/update-order.dto';
+import { Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseInterceptors, Body, Res } from '@nestjs/common';
+import { Response } from 'express';
+import * as path from 'path';
+import * as fs from 'fs';
+
 @Controller('v1/order')
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
+
+  @Get('download/:filename')
+  async downloadFile(@Param('filename') filename: string, @Res() res: Response) {
+    const folder = process.env.VERCEL ? '/tmp' : './uploads';
+    const filePath = path.join(folder, filename);
+
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    } else {
+      return res.status(404).json({ message: 'File not found' });
+    }
+  }
+
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', {

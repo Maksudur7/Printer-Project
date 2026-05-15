@@ -55,7 +55,7 @@ export class OrderService {
 
     // ৩. ফাইল ইউআরএল জেনারেট করা
     const appUrl = process.env.BACKEND_URL || 'https://printer-project-two.vercel.app';
-    const fileUrl = `${appUrl}/${file.filename}`;
+    const fileUrl = `${appUrl.replace(/\/$/, '')}/v1/order/download/${file.filename}`;
 
     return await this.prisma.order.create({
       data: {
