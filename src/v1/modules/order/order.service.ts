@@ -54,8 +54,8 @@ export class OrderService {
     const totalAmount = pageCount * rate * copyCount;
 
     // ৩. ফাইল ইউআরএল জেনারেট করা
-    const appUrl = process.env.BACKEND_URL || 'https://printer-project-two.vercel.app';
-    const fileUrl = `${appUrl.replace(/\/$/, '')}/v1/order/download/${file.filename}`;
+    const appUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const fileUrl = `${appUrl.replace(/\/$/, '')}/uploads/${file.filename}`;
 
     return await this.prisma.order.create({
       data: {

@@ -13,13 +13,27 @@ export class OrderController {
 
   @Get('download/:filename')
   async downloadFile(@Param('filename') filename: string, @Res() res: Response) {
-    const folder = process.env.VERCEL ? '/tmp' : './uploads';
-    const filePath = path.join(folder, filename);
+    try {
+      const folder = 'uploads';
+      const filePath = path.join(process.cwd(), folder, filename);
 
-    if (fs.existsSync(filePath)) {
-      return res.sendFile(filePath);
-    } else {
-      return res.status(404).json({ message: 'File not found' });
+      if (!fs.existsSync(filePath)) {
+        this.orderService['logger'].error(`File not found: ${filePath}`);
+        return res.status(404).json({ message: 'File not found' });
+      }
+
+      // res.download ব্যবহার করা বেশি নিরাপদ
+      return res.download(filePath, filename, (err) => {
+        if (err) {
+          console.error('Download error:', err);
+          if (!res.headersSent) {
+            res.status(500).send({ message: 'Error downloading file' });
+          }
+        }
+      });
+    } catch (error) {
+      console.error('Controller Error:', error);
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 

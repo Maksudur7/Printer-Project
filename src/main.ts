@@ -33,7 +33,9 @@ async function bootstrap() {
   if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
   }
-  app.useStaticAssets(uploadDir);
+  app.useStaticAssets(uploadDir, {
+    prefix: '/uploads/',
+  });
 
   const port = process.env.PORT || 5000;
 

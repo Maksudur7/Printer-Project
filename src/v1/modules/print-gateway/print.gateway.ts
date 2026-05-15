@@ -122,7 +122,7 @@ export class PrintGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // Agent jakhon print sesh kore, ei event pathay
 
   @SubscribeMessage('print:status')
-  handlePrintStatus(
+  async handlePrintStatus(
     @MessageBody()
     data: { orderId: string; status: string; deviceId: string },
     @ConnectedSocket() client: Socket,
@@ -130,8 +130,19 @@ export class PrintGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(
       `Print status update - Order: ${data.orderId} | Status: ${data.status}`,
     );
-    // Ei status frontend-eo pathano jabe (order tracking page-er jonno)
-    this.server.emit(`order:${data.orderId}:status`, { status: data.status });
+
+    try {
+      // ডাটাবেজে স্ট্যাটাস আপডেট করা জরুরি
+      await this.prisma.order.update({
+        where: { id: data.orderId },
+        data: { printStatus: data.status as any },
+      });
+
+      // ফ্রন্টএন্ডে সকেট মেসেজ পাঠানো
+      this.server.emit(`order:${data.orderId}:status`, { status: data.status });
+    } catch (error) {
+      this.logger.error(`Failed to update order status: ${error.message}`);
+    }
   }
 
   // ─── Send Print Job to Kiosk ──────────────────────────────────────────────
