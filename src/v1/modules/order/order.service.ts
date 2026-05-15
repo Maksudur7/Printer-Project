@@ -17,8 +17,19 @@ export class OrderService {
       throw new BadRequestException('No file uploaded. Please select a file with key "file"');
     }
 
+    // ১. কিওস্ক আছে কি না চেক করো (Foreign Key Error এড়াতে)
+    const kioskId = data.kioskId || '';
+    const kiosk = await this.prisma.kiosk.findUnique({
+      where: { deviceId: kioskId },
+    });
+
+    if (!kiosk) {
+      throw new BadRequestException(`Invalid Kiosk ID: "${kioskId}". Please ensure the Kiosk is registered.`);
+    }
+
     let pageCount = parseInt(data.pageCount) || 1;
 
+    // ২. PDF পেজ কাউন্ট (Vercel-এ ফাইল পাথ হ্যান্ডেল করা)
     if (file.mimetype === 'application/pdf') {
       try {
         const dataBuffer = fs.readFileSync(file.path);
@@ -29,7 +40,6 @@ export class OrderService {
       }
     }
 
-
     const isColor = String(data.isColor).toLowerCase() === 'true';
     const copyCount = parseInt(data.copyCount) || 1;
 
@@ -38,8 +48,8 @@ export class OrderService {
       : Number(process.env.PRICE_BW) || 2;
     const totalAmount = pageCount * rate * copyCount;
 
-    const appUrl =
-      process.env.APP_URL || 'https://printer-project-two.vercel.app';
+    // ৩. ফাইল ইউআরএল জেনারেট করা
+    const appUrl = process.env.BACKEND_URL || 'https://printer-project-two.vercel.app';
     const fileUrl = `${appUrl}/${file.filename}`;
 
     return await this.prisma.order.create({
@@ -47,7 +57,7 @@ export class OrderService {
         userId: data.userId,
         userEmail: data.userEmail,
         userPhone: data.userPhone,
-        kioskId: data.kioskId,
+        kioskId: kioskId,
         filePath: file.path,
         fileName: file.originalname,
         fileUrl: fileUrl,
