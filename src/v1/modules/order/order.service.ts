@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { PrintGateway } from '../print-gateway/print.gateway';
@@ -7,6 +7,8 @@ import * as fs from 'fs';
 
 @Injectable()
 export class OrderService {
+  private readonly logger = new Logger(OrderService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly printGateway: PrintGateway,
@@ -18,13 +20,16 @@ export class OrderService {
     }
 
     // ১. কিওস্ক আছে কি না চেক করো (Foreign Key Error এড়াতে)
-    const kioskId = data.kioskId || '';
+    const rawKioskId = (data.kioskId || '').toString().trim();
+    console.log(`[ORDER] Creating order for Kiosk: "${rawKioskId}"`);
+
     const kiosk = await this.prisma.kiosk.findUnique({
-      where: { deviceId: kioskId },
+      where: { deviceId: rawKioskId },
     });
 
     if (!kiosk) {
-      throw new BadRequestException(`Invalid Kiosk ID: "${kioskId}". Please ensure the Kiosk is registered.`);
+      this.logger.error(`Kiosk not found in DB: "${rawKioskId}"`);
+      throw new BadRequestException(`Invalid Kiosk ID: "${rawKioskId}". Please ensure the Kiosk is registered.`);
     }
 
     let pageCount = parseInt(data.pageCount) || 1;
@@ -57,7 +62,7 @@ export class OrderService {
         userId: data.userId,
         userEmail: data.userEmail,
         userPhone: data.userPhone,
-        kioskId: kioskId,
+        kioskId: kiosk.deviceId, // Use validated deviceId
         filePath: file.path,
         fileName: file.originalname,
         fileUrl: fileUrl,
