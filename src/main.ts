@@ -1,59 +1,59 @@
 import 'dotenv/config';
-// Polyfills/Mocks for pdf-parse to prevent crash on Vercel
-if (process.env.VERCEL) {
-  (global as any).DOMMatrix = class {};
-  (global as any).ImageData = class {};
-  (global as any).Path2D = class {};
-  (global as any).CanvasGradient = class {};
-  (global as any).CanvasPattern = class {};
-  (global as any).CanvasRenderingContext2D = class {};
-}
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
-let cachedApp: any;
+// Polyfills for Vercel
+if (process.env.VERCEL) {
+  (global as any).DOMMatrix = class {};
+  (global as any).ImageData = class {};
+  (global as any).Path2D = class {};
+}
 
 async function bootstrap() {
-  if (!cachedApp) {
-    const app = await NestFactory.create<NestExpressApplication>(AppModule);
-    
-    app.enableCors();
-    app.useGlobalPipes(new ValidationPipe({
-      whitelist: true,         // strips unknown fields silently
-      forbidNonWhitelisted: false, // do NOT throw 400 for extra fields
-      transform: true,
-    }));
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  
+  // CORS Enable
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+  });
 
-    // Static files serve করার সময় খেয়াল রাখতে হবে ফোল্ডারটি আছে কিনা
-    if (!process.env.VERCEL) {
-        const fs = require('fs');
-        const path = require('path');
-        const uploadDir = path.join(process.cwd(), 'uploads');
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir);
-        }
-        app.useStaticAssets(uploadDir);
-    }
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+  }));
 
-    await app.init();
-    cachedApp = app.getHttpAdapter().getInstance();
+  // Static Assets
+  const uploadDir = path.join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
   }
-  return cachedApp;
+  app.useStaticAssets(uploadDir);
+
+  const port = process.env.PORT || 5000;
+
+  if (!process.env.VERCEL) {
+    // 0.0.0.0 bypasses firewall issues for network access
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Server running on http://localhost:${port}`);
+  } else {
+    await app.init();
+    return app.getHttpAdapter().getInstance();
+  }
+}
+
+if (!process.env.VERCEL) {
+  bootstrap();
 }
 
 export default async (req: any, res: any) => {
-  const app = await bootstrap();
-  app(req, res);
+  const instance = await bootstrap();
+  if (instance) {
+    instance(req, res);
+  }
 };
-
-// Local development
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  bootstrap().then(async () => {
-    const app = await NestFactory.create<NestExpressApplication>(AppModule);
-    await app.listen(process.env.PORT || 5000);
-    console.log(`🚀 Local server running at http://localhost:${process.env.PORT || 5000}`);
-  });
-}

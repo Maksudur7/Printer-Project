@@ -3,7 +3,7 @@ import { OrderService } from './order.service';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { Controller, Delete, Get, Param, Patch, Post, UploadedFile, UseInterceptors, Body, Res } from '@nestjs/common';
-import { Response } from 'express';
+import type { Response } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
 
