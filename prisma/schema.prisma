@@ -14,21 +14,44 @@ datasource db {
   provider = "postgresql"
 }
 
-
 model Kiosk {
   id            String      @id @default(uuid())
   deviceId      String      @unique // Hardware serial ba unique ID
-  name          String // Kiosk-er ekta naam (e.g. "Library-01")
+  name          String      // Kiosk-er ekta naam (e.g. "Library-01")
   location      String?
   status        KioskStatus @default(ONLINE)
-  qrCodeUrl     String? // Backend theke generate kora QR link
+  qrCodeUrl     String?     // Backend theke generate kora QR link
   paperLevel    Int         @default(100) // Percentage (0-100)
   inkLevel      Int         @default(100) // Percentage (0-100)
   lastError     String?     // Recording specific error messages
   totalRevenue  Float       @default(0)   // Total earnings of this device
   lastHeartbeat DateTime    @default(now())
 
-  orders    Order[] // One-to-many relationship
+  orders    Order[]   // One-to-many relationship
+  printers  Printer[] // Printers connected to this kiosk
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Ekta kiosk-e koyta printer ache tar details
+// 1 PC-te multiple printer support korar jonno
+model Printer {
+  id          String @id @default(uuid())
+  kioskId     String
+  kiosk       Kiosk  @relation(fields: [kioskId], references: [id])
+
+  // Windows-e printer-er exact naam - agent software ei naam use korbe
+  // e.g. "HP LaserJet 1020", "Canon PIXMA MG3620"
+  windowsName String
+
+  // UI-te user dekhe shei naam
+  // e.g. "Black & White Printer", "Color Printer"
+  displayName String
+
+  supportsColor Boolean @default(false) // Color print korte parbe?
+  supportsBW    Boolean @default(true)  // B&W print korte parbe?
+  isActive      Boolean @default(true)  // Ekhon connected/active ache?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -65,11 +88,11 @@ model Order {
   copyCount Int     @default(1)
   isColor   Boolean @default(false)
   isDuplex  Boolean @default(false)
-  orientation String  @default("portrait") // portrait ba landscape
+  orientation String @default("portrait") // portrait ba landscape
 
   // Money details
   totalAmount Float? // Mot koto taka bill holo
-  paidAmount  Float @default(0) // Koto taka ekhon porjonto dise
+  paidAmount  Float  @default(0) // Koto taka ekhon porjonto dise
 
   // Statuses
   paymentStatus PaymentStatus @default(PENDING)
@@ -83,7 +106,7 @@ model Order {
 
 enum PaymentStatus {
   PENDING
-  PARTIAL // Jodi keu kichu taka dey kintu purota na
+  PARTIAL    // Jodi keu kichu taka dey kintu purota na
   COMPLETED
   FAILED
   REFUNDED
@@ -91,10 +114,10 @@ enum PaymentStatus {
 
 enum PrintStatus {
   WAITING_FOR_PAYMENT
-  QUEUED // Taka deoa shesh, ekhon line-e ache
-  PRINTING // Machine ekhon print korche
-  COMPLETED // Hat-e peye gese
-  FAILED // Kono karone print hoy nai
+  QUEUED      // Taka deoa shesh, ekhon line-e ache
+  PRINTING    // Machine ekhon print korche
+  COMPLETED   // Hat-e peye gese
+  FAILED      // Kono karone print hoy nai
 }
 
 model Payment {
@@ -102,7 +125,7 @@ model Payment {
   orderId String
   order   Order  @relation(fields: [orderId], references: [id])
 
-  amount        Float // Ei specific transaction-e koto dise
+  amount        Float         // Ei specific transaction-e koto dise
   method        PaymentMethod
   transactionId String?       @unique // bKash/Nagad ID ba hardware signal ID
 
@@ -110,7 +133,7 @@ model Payment {
 }
 
 enum PaymentMethod {
-  CASH // Bill Acceptor theke deoa taka
+  CASH       // Bill Acceptor theke deoa taka
   BKASH
   NAGAD
   SSLCOMMERZ
@@ -135,9 +158,9 @@ model User {
 }
 
 model Config {
-  id              String   @id @default(uuid())
-  bwPrice         Float    @default(2.0)
-  colorPrice      Float    @default(5.0)
-  paperThreshold  Int      @default(5)
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(uuid())
+  bwPrice        Float    @default(2.0)
+  colorPrice     Float    @default(5.0)
+  paperThreshold Int      @default(5)
+  updatedAt      DateTime @updatedAt
 }

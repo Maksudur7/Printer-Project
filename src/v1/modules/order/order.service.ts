@@ -1,36 +1,45 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../shared/prisma/prisma.service';
 import { UpdateOrderDto } from './dto/update-order.dto';
-const pdf = require('pdf-parse');
+import { PrintGateway } from '../print-gateway/print.gateway';
+import { PDFDocument } from 'pdf-lib';
 import * as fs from 'fs';
 
 @Injectable()
 export class OrderService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly printGateway: PrintGateway,
+  ) { }
 
   async createOrder(data: any, file: Express.Multer.File) {
-    // ১. পেজ সংখ্যা ডিটেক্ট করা (PDF হলে)
+    if (!file) {
+      throw new BadRequestException('No file uploaded. Please select a file with key "file"');
+    }
+
     let pageCount = parseInt(data.pageCount) || 1;
 
     if (file.mimetype === 'application/pdf') {
       try {
         const dataBuffer = fs.readFileSync(file.path);
-        const pdfData = await pdf(dataBuffer);
-        pageCount = pdfData.numpages;
+        const pdfDoc = await PDFDocument.load(dataBuffer);
+        pageCount = pdfDoc.getPageCount();
       } catch (error) {
         console.error('Error parsing PDF:', error);
       }
     }
 
-    // ২. প্রাইস ক্যালকুলেশন
+
     const isColor = String(data.isColor).toLowerCase() === 'true';
     const copyCount = parseInt(data.copyCount) || 1;
 
-    // কালার ৫ টাকা, সাদাকালো ২ টাকা (ডিফল্ট)
-    const rate = isColor ? (Number(process.env.PRICE_COLOR) || 5) : (Number(process.env.PRICE_BW) || 2);
+    const rate = isColor
+      ? Number(process.env.PRICE_COLOR) || 5
+      : Number(process.env.PRICE_BW) || 2;
     const totalAmount = pageCount * rate * copyCount;
 
-    const appUrl = process.env.APP_URL || 'https://printer-project-two.vercel.app';
+    const appUrl =
+      process.env.APP_URL || 'https://printer-project-two.vercel.app';
     const fileUrl = `${appUrl}/${file.filename}`;
 
     return await this.prisma.order.create({
@@ -75,16 +84,74 @@ export class OrderService {
   }
 
   async update(id: string, updateOrderDto: UpdateOrderDto) {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
-    });
+    const order = await this.prisma.order.findUnique({ where: { id } });
 
     if (!order) {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.paymentStatus !== 'COMPLETED') {
-      throw new ForbiddenException('Please complete your payment before updating order status');
+    if (
+      updateOrderDto.paymentStatus === 'COMPLETED' &&
+      order.paymentStatus !== 'COMPLETED'
+    ) {
+
+      const updatedOrder = await this.prisma.order.update({
+        where: { id },
+        data: {
+          ...updateOrderDto,
+          printStatus: 'QUEUED',
+        },
+      });
+
+      const kiosk: any = await this.prisma.kiosk.findUnique({
+        where: { deviceId: order.kioskId },
+        include: {
+          printers: {
+            where: { isActive: true },
+          },
+        },
+      });
+
+      let selectedPrinter: any = null;
+      if (kiosk?.printers && kiosk.printers.length > 0) {
+        if (order.isColor) {
+          selectedPrinter =
+            kiosk.printers.find((p: any) => p.supportsColor) ||
+            kiosk.printers[0];
+        } else {
+          selectedPrinter =
+            kiosk.printers.find((p: any) => p.supportsBW) ||
+            kiosk.printers[0];
+        }
+      }
+
+      const jobSent = this.printGateway.sendPrintJob(order.kioskId, {
+        orderId: updatedOrder.id,
+        orderNumber: updatedOrder.orderNumber,
+        fileUrl: updatedOrder.fileUrl,
+        fileName: updatedOrder.fileName,
+        pageCount: updatedOrder.pageCount,
+        copyCount: updatedOrder.copyCount,
+        isColor: updatedOrder.isColor,
+        isDuplex: updatedOrder.isDuplex,
+        orientation: updatedOrder.orientation,
+        targetPrinter: selectedPrinter?.windowsName || null,
+      });
+
+      if (!jobSent) {
+        console.warn(
+          `Kiosk ${order.kioskId} is OFFLINE. Order ${id} queued in DB.`,
+        );
+      }
+
+      return updatedOrder;
+    }
+
+    // Normal update (payment complete na hole)
+    if (order.paymentStatus !== 'COMPLETED' && !updateOrderDto.paymentStatus) {
+      throw new ForbiddenException(
+        'Please complete your payment before updating order status',
+      );
     }
 
     return await this.prisma.order.update({
@@ -97,4 +164,4 @@ export class OrderService {
     await this.findOne(id);
     return this.prisma.order.delete({ where: { id } });
   }
-};
+}
