@@ -54,6 +54,8 @@ model Printer {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([kioskId, windowsName])
 }
 
 enum KioskStatus {

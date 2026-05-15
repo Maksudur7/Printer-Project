@@ -9,11 +9,12 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable, Logger } from '@nestjs/common';
+import { PrismaService } from '../../shared/prisma/prisma.service';
 
 @Injectable()
 @WebSocketGateway({
   cors: {
-    origin: '*', // Production-e specific domain dite hobe
+    origin: '*',
   },
   namespace: '/kiosk',
 })
@@ -22,18 +23,16 @@ export class PrintGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(PrintGateway.name);
-
-  // Kon socket kon kiosk-er - { deviceId -> socketId }
   private kioskSockets = new Map<string, string>();
 
-  // ─── Connection Events ────────────────────────────────────────────────────
+  constructor(private readonly prisma: PrismaService) {}
 
+  // ─── Connection Events ────────────────────────────────────────────────────
   handleConnection(client: Socket) {
     this.logger.log(`Client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket) {
-    // Disconnect hole map theke remove koro
     for (const [deviceId, socketId] of this.kioskSockets.entries()) {
       if (socketId === client.id) {
         this.kioskSockets.delete(deviceId);
@@ -43,25 +42,77 @@ export class PrintGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  // ─── Kiosk Register ───────────────────────────────────────────────────────
-  // Dokan-er Agent prothomei ei event pathay nijeke register korar jonno
-
+  // ─── Kiosk Register & Sync ────────────────────────────────────────────────
   @SubscribeMessage('kiosk:register')
-  handleRegister(
-    @MessageBody() data: { deviceId: string; printers: any[] },
+  async handleRegister(
+    @MessageBody() data: { deviceId: string; name?: string; printers: any[] },
     @ConnectedSocket() client: Socket,
   ) {
-    this.kioskSockets.set(data.deviceId, client.id);
-    this.logger.log(
-      `Kiosk ONLINE: ${data.deviceId} | Printers: ${data.printers?.length || 0}`,
-    );
+    const { deviceId, name, printers } = data;
+    this.kioskSockets.set(deviceId, client.id);
 
-    // Confirm pathao agent-ke
-    client.emit('kiosk:registered', {
-      success: true,
-      message: `Kiosk ${data.deviceId} registered successfully`,
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      // QR Code URL Generate koro (Frontend link)
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const scanUrl = `${frontendUrl}/upload?kiosk=${deviceId}`;
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(scanUrl)}`;
+
+      // ১. Kiosk Upsert (Thakle update, na thakle create)
+      const kiosk = await this.prisma.kiosk.upsert({
+        where: { deviceId },
+        update: { 
+          lastHeartbeat: new Date(), 
+          status: 'ONLINE',
+          qrCodeUrl // Update QR code if changed
+        },
+        create: {
+          deviceId,
+          name: name || `Kiosk ${deviceId}`,
+          status: 'ONLINE',
+          qrCodeUrl,
+          paperLevel: 100,
+          inkLevel: 100,
+        },
+      });
+
+      // ২. Printers Sync
+      if (printers && printers.length > 0) {
+        for (const p of printers) {
+          await this.prisma.printer.upsert({
+            where: {
+              kioskId_windowsName: {
+                kioskId: kiosk.id,
+                windowsName: p.windowsName,
+              },
+            },
+            update: {
+              supportsColor: !!p.supportsColor,
+              supportsBW: !!p.supportsBW,
+              isActive: true,
+            },
+            create: {
+              windowsName: p.windowsName,
+              displayName: p.displayName || p.windowsName,
+              supportsColor: !!p.supportsColor,
+              supportsBW: !!p.supportsBW,
+              isActive: true,
+              kiosk: { connect: { id: kiosk.id } },
+            },
+          });
+        }
+      }
+
+      this.logger.log(`Kiosk Sync: ${deviceId} | ${printers.length} Printers`);
+
+      client.emit('kiosk:registered', {
+        success: true,
+        kioskId: kiosk.id,
+        message: 'Kiosk and printers synchronized successfully',
+      });
+    } catch (error) {
+      this.logger.error(`Registration failed: ${error.message}`);
+      client.emit('kiosk:registered', { success: false, error: error.message });
+    }
   }
 
   // ─── Print Status Update ──────────────────────────────────────────────────
